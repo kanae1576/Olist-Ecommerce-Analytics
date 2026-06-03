@@ -75,7 +75,6 @@ ORDER BY total_impacted_rows DESC;
 SELECT
   customer_city,
   COUNT(DISTINCT customer_state) AS distinct_state_count,
-  -- Adding DISTINCT here fixes the text aggregation explosion
   STRING_AGG(DISTINCT customer_state, ', ' ORDER BY customer_state) AS unique_states_sharing_name,
   COUNT(*) AS total_customer_rows
 FROM `ecommerce-operations-sql-audit.ecommerce_data.customers`

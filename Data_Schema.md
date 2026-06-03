@@ -66,3 +66,57 @@ order_payments.csv
 - Payment installments: values from 1–24, plus 2 anomalous zero-installment rows
 - Payment value: ranges from 0.0 to 13,664.08 BRL
 - Caveat: rows with payment_type = not_defined AND payment_value = 0.0 are excluded from analytical models as invalid payment records. Other zero-value payment rows are retained as valid edge cases and flagged for awareness
+
+order_reviews.csv
+- Grain: one row per review linked to an order
+- Total rows: 99224
+- Candidate key: order_id, review_id is not globally unique
+- FK integrity: no orphan order_id values
+- Nulls: review_comment_title: 87658 nulls (~88%), review_comment_message: 58256 nulls (~59%)
+- Review score: values from 1-5, no outliers
+- Date range: 2016-2018, consistent with the dataset
+- Caveats: - review_id is not globally unique, some values are reused across orders
+- some orders have multiple review rows, these must be deduplicated in staging, keeping the most recent review per order
+- Comment fields are optional and sparse
+
+geolocation.csv
+- Grain: one row per geolocation record
+- Total rows: 1000163
+- Business key for analytics: geolocation_zip_code_prefix
+- Nulls: none in any column
+- Latitude: values from -36.6 to 45.1 (in normal scope)
+- Longtitude: values from -101 to 121 (in normal scope)
+- Cities: 8011 distinct values, multiple variants of the same city
+- States: 27 distinct values, no anomalies
+- FK relationships: geolocation_zip_code_prefix is joined to customers.customer_zip_code_prefix and sellers.seller_zip_code_prefix
+- Caveats: 1. Multiple rows per zip code prefix, use zip code as business key, not the full composite
+2. City names are not normalized, treat state as primary geographic dimension
+
+products.csv
+- Grain: one row per product
+- Total rows: 32951
+- Primary key: product_id
+- Null pattern: - 610 rows have ALL of these columns NULL: product_category_name, product_name_length, 
+  product_description_length, product_photos_qty.
+- 2 rows have NULLs in physical dimensions (weight/length/height/width).
+- Total null-heavy rows: 611.
+- Product category name: 50 different categories
+- Outliers: 4 zero-weight products, concentrated in cama_mesa_banho
+- Caveats: - 1,604 order items reference products in the 611 null-heavy rows
+- preserve raw rows, use staging to translate categories and manage null-aware business logic
+
+sellers.csv
+- Grain: one row per seller
+- Total rows: 3095
+- Primary key: seller_id
+- Nulls: none in all columns
+- FK integrity: 7 out of 3095 sellers have seller_zip_code_prefix that does not exist in geolocation table
+- State distribution: 23 distinct states (normal)
+- Caveats: - preserve raw rows, 7 sellers will have NULL geolocation; handle with NULL-aware logic
+
+product_category_name_translation.csv
+- Grain: one row per product category name (Portuguese) → English translation pair
+- Total rows: 71
+- Nulls: none in all columns
+- Candidate key: product_category_name (Portuguese)
+- Caveats: For products without translations, fallback to original Portuguese category name
