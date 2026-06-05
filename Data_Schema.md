@@ -1,122 +1,77 @@
-# Brazilian E-Commerce Data Schema
+# Olist Brazilian E-Commerce Dataset - Data Dictionary
 
-## 📂Main Tables
+## 📋 Overview
+This document is the central reference for the raw dataset. It includes table grain, keys, business context, quality issues, and initial modeling considerations.
 
-| Table Name | Purpose | Primary/Composite Keys | Foreign Keys | Other Columns |
-| :--- | :--- | :--- | :--- | :--- |
-| **`customers.csv`** | Stores customer identity and location information | `customer_id` | None (Has Unique Key: `customer_unique_id`) | `customer_zip_code_prefix`, `customer_city`, `customer_state` |
-| **`orders.csv`** | Core table tracking every customer order and its delivery lifecycle | `order_id` | `customer_id` | `order_status`, `order_purchase_timestamp`, `order_approved_at`, `order_delivered_carrier_date`, `order_delivered_customer_date`, `order_estimated_delivery_date` |
-| **`order_items.csv`** | Stores each order item’s product, seller, price, and shipping details | `order_id` + `order_item_id` | `order_id`, `product_id`, `seller_id` | `price`, `freight_value`, `shipping_limit_date` |
-| **`order_payments.csv`** | Stores payment details for each order | `order_id` + `payment_sequential` | `order_id` | `payment_type`, `payment_installments`, `payment_value` |
-| **`order_reviews.csv`** | Stores customer review and feedback data for each order | None | `order_id` | `review_score`, `review_comment_title`, `review_comment_message`, `review_creation_date`, `review_answer_timestamp` |
-| **`products.csv`** | Stores product attributes and physical characteristics | `product_id` | None | `product_name_length`, `product_description_length`, `product_photos_qty`, `product_weight_g`, `product_length_cm`, `product_height_cm`, `product_width_cm` |
-| **`sellers.csv`** | Stores seller identity and location information | `seller_id` | None | `seller_zip_code_prefix`, `seller_city`, `seller_state` |
+**Dataset Period**: 2016–2018  
+**Total Orders**: 99,441
 
-## 🗺️Support Tables
+## 📂 Main Tables
 
-| Table Name | Purpose | Primary/Composite Keys | Foreign Keys | Other Columns |
-| :--- | :--- | :--- | :--- | :--- |
-| **`geolocation.csv`** | Maps zip code prefixes to geographic location data | None | `geolocation_zip_code_prefix` (Spatial lookup key to `customers` / `sellers`) | `geolocation_latitude`, `geolocation_longitude`, `geolocation_city`, `geolocation_state` |
-| **`product_category_name_translation.csv`** | Translates product category names from Portuguese to English | `product_category_name` | None | `product_category_name_english` |
+| Table Name | Grain | Primary/Candidate Keys | Foreign Keys | Business Purpose | Nulls | Data Quality Caveats |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`orders`** | one row per order | `order_id` | `customer_id` | Core transactional table. Central fact for order lifecycle analysis | 23 delivered orders have missing delivery cycle timestamps | 165 rows have invalid delivery timelines |
+| **`customers`** | one row per customer_id | `customer_id` | None | Customer master data (shipping address at time of order) | No null values | 2,997 repeated `customer_unique_id`; 163 cities with multiple states |
+| **`order_items`** | One row per item within an order | `order_id` + `order_item_id` | `order_id`, `product_id`, `seller_id` | Line-level order details (essential for revenue, freight, seller performance) | No null values | Highly skewed price/freight distribution; outliers affect aggregates |
+| **`order_payments`** | One row per payment installment record per order | `order_id` + `payment_sequential` | `order_id` | Payment breakdown per order | No null values | 3 rows with `payment_type = not_defined`; 2 rows with `installments = 0`; rows with `not_defined` AND `payment_value = 0` are invalid |
+| **`order_reviews`** | One row per review linked to an order | `order_id` (candidate key) | `order_id` | Customer feedback linked to orders | `review_comment_title`: ~88% null; `review_comment_message`: ~59% null | `review_id` is not globally unique; comment fields are optional and sparse |
+| **`products`** | One row per product | `product_id` | None | Product master with attributes | 610 rows null in category/descriptive fields; 2 rows null in physical dimensions | 1,604 `order_items` reference products in the 611 null-heavy rows; 4 zero-weight products in `cama_mesa_banho` |
+| **`sellers`** | One row per seller | `seller_id` | None | Seller master data | None | 7 of 3,095 sellers have `seller_zip_code_prefix` not in `geolocation` |
 
-orders.csv:
-- Grain: one row per order
+## 🗺️ Reference Tables
+
+| Table Name | Grain | Primary/Candidate Keys | Foreign Keys | Business Purpose | Nulls | Data Quality Caveats |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`geolocation`** | One row per geolocation record | `geolocation_zip_code_prefix` (business key) | None | Geographic reference for customers & sellers | No null values | Multiple rows per zip code prefix; 8,011 distinct cities with variants; city names not normalized |
+| **`product_category_name_translation`** | One row per Portuguese → English category pair | `product_category_name` (Portuguese) | None | English translation of Portuguese categories | None in all columns | 623 products have categories not in translation table |
+
+## 📝 Notes
+
+### orders.csv
 - Total rows: 99,441
-- Primary key: order_id
-- Foreign key: customer_id
-- Nulls: no nulls in order_id, customer_id, order_status, or order_purchase_timestamp
+- Strong foreign key integrity
 - Date range: 2016–2018, consistent with the dataset
-- Status values: delivered, shipped, canceled, unavailable, invoiced, processing, created, approved; no unexpected statuses
-- FK integrity: no orphan customer_id values
-- Caveats:
-    165 rows have invalid delivery timelines
-    23 delivered orders have missing delivery cycle timestamps
+- Clean order_status values
 
-customers.csv
-- Grain: one row per customer_id
+### customers.csv
 - Total rows: 99,441
-- Primary key: customer_id (99,441 unique, no duplicates)
-- customer_unique_id: 96,096 unique; 2,997 repeated customers
-Of repeated: 2,745 same state/city/zip, 130 same state/city/different zip, 122 different locations
-- Nulls: 0% in all columns
-- State: 27 federal units (26 states + Federal District), no anomalies. SP dominant (40k+ orders), 13 states <1k
-- Zip code prefix: 23,995 rows (3,869 values) with 4-digit format instead of 5-digit; all in SP, all <10,000 → missing leading zero
-- City–state: 163 cities with multiple states; city alone is not a unique or reliable key
-- Caveat: Use customer_id as PK, not customer_unique_id. Treat zip code as string with leading zero in staging
+- Clean customer_state values
+- Use customer_id as Primary key (representing unique purchases)
+- Treat zip code as string with leading zero in staging
 
-order_items.csv
-- Grain: one row per item within an order
-- Total rows: 112650
-- Composite key: order_id + order_item_id
-- Foreign keys: order_id, product_id, seller_id
-- Nulls: 0% in all columns
-- FK integrity: no orphan foreign key values
-- Price: median 74.99 BRL; P90 ≈ 230 BRL; P95 ≈ 350 BRL; P99 ≈ 890 BRL; top 0.1% ≈ 2,110 BRL.
-- Freight: median 16.26 BRL; P90 ≈ 34 BRL; P95 ≈ 45 BRL; P99 ≈ 84.5 BRL; top 0.1% ≈ 175.7 BRL.
-- Caveat: highly skewed distribution; outliers will affect aggregate metrics. Metric definitions should specify whether outliers are capped or excluded.
+### order_items.csv
+- Total rows: 112,650
+- Strong foreign key integrity
+- High skew in monetary fields, will evaluate outlier strategy during intermediate/mart layer
 
-order_payments.csv
-- Grain: one row per payment installment record per order
-- Total rows: 103886
-- Composite key: order_id + payment_sequential
-- Foreign key: order_id
-- FK integrity: no orphan order_id values
-- Nulls: 0% in all columns
-- Payment type: mostly valid categories, with 3 not_defined rows (debit_card, credit_card, boleto, voucher)
-- Payment installments: values from 1–24, plus 2 anomalous zero-installment rows
-- Payment value: ranges from 0.0 to 13,664.08 BRL
-- Caveat: rows with payment_type = not_defined AND payment_value = 0.0 are excluded from analytical models as invalid payment records. Other zero-value payment rows are retained as valid edge cases and flagged for awareness
+### order_payments.csv
+- Total rows: 103,886
+- Strong foreign key integrity
+- Clean payment_type values
+- Filter out invalid payment records, other zero-value payment rows are retained as valid edge cases and flagged for awareness
 
-order_reviews.csv
-- Grain: one row per review linked to an order
-- Total rows: 99224
-- Candidate key: order_id, review_id is not globally unique
-- FK integrity: no orphan order_id values
-- Nulls: review_comment_title: 87658 nulls (~88%), review_comment_message: 58256 nulls (~59%)
-- Review score: values from 1-5, no outliers
-- Date range: 2016-2018, consistent with the dataset
-- Caveats: - review_id is not globally unique, some values are reused across orders
-- some orders have multiple review rows, these must be deduplicated in staging, keeping the most recent review per order
-- Comment fields are optional and sparse
+### order_reviews.csv
+- Total rows: 99,224
+- Strong foreign key integrity
+- Valid review_creation_date values
+- Deduplicate rows in staging, keeping only the most recent review per order
 
-geolocation.csv
-- Grain: one row per geolocation record
-- Total rows: 1000163
-- Business key for analytics: geolocation_zip_code_prefix
-- Nulls: none in any column
-- Latitude: values from -36.6 to 45.1 (in normal scope)
-- Longtitude: values from -101 to 121 (in normal scope)
-- Cities: 8011 distinct values, multiple variants of the same city
-- States: 27 distinct values, no anomalies
-- FK relationships: geolocation_zip_code_prefix is joined to customers.customer_zip_code_prefix and sellers.seller_zip_code_prefix
-- Caveats: 1. Multiple rows per zip code prefix, use zip code as business key, not the full composite
-2. City names are not normalized, treat state as primary geographic dimension
-
-products.csv
-- Grain: one row per product
-- Total rows: 32951
-- Primary key: product_id
-- Null pattern: - 610 rows have ALL of these columns NULL: product_category_name, product_name_length, 
-  product_description_length, product_photos_qty.
-- 2 rows have NULLs in physical dimensions (weight/length/height/width).
-- Total null-heavy rows: 611.
-- Product category name: 50 different categories
+### products.csv
+- Total rows: 32,951
 - Outliers: 4 zero-weight products, concentrated in cama_mesa_banho
-- Caveats: - 1,604 order items reference products in the 611 null-heavy rows
-- preserve raw rows, use staging to translate categories and manage null-aware business logic
+- Will preserve raw rows and join with translation table early in the pipeline
 
-sellers.csv
-- Grain: one row per seller
-- Total rows: 3095
-- Primary key: seller_id
-- Nulls: none in all columns
-- FK integrity: 7 out of 3095 sellers have seller_zip_code_prefix that does not exist in geolocation table
-- State distribution: 23 distinct states (normal)
-- Caveats: - preserve raw rows, 7 sellers will have NULL geolocation; handle with NULL-aware logic
+### sellers.csv
+- Total rows: 3,095
+- 7 sellers have seller_zip_code_prefix that does not exist in geolocation table
+- Clean seller_state values
+- Preserve raw rows, handle the 7 sellers with NULL geolocation with NULL-aware logic
 
-product_category_name_translation.csv
-- Grain: one row per product category name (Portuguese) → English translation pair
+### geolocation.csv
+- Total rows: 1,000,163
+- Clean latitude, longtitude, city and state values
+- High volume table (1M+ rows), join via zip code prefix only, treat state as primary geographic dimension
+
+### product_category_name_translation.csv
 - Total rows: 71
-- Nulls: none in all columns
-- Candidate key: product_category_name (Portuguese)
-- Caveats: For products without translations, fallback to original Portuguese category name
+- For products without translations, fallback to original Portuguese category name
