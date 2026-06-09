@@ -1,0 +1,101 @@
+version: 2
+
+sources:
+  - name: olist
+    description: "Raw historical E-Commerce transactional data ingested from the Olist marketplace."
+    database: ecommerce-operations-sql-audit
+    schema: ecommerce_data
+    
+    tables:
+      - name: orders
+        description: "Core transactional table for order lifecycle analysis."
+        columns:
+          - name: order_id
+            description: "Primary key. Unique identifier for each order transaction."
+            tests:
+              - unique
+              - not_null
+          - name: customer_id
+            description: "Foreign key. Links to customers table."
+            tests:
+              - not_null
+              
+      - name: customers
+        description: "Customer master data capturing geographical tags at time of purchase."
+        columns:
+          - name: customer_id
+            description: "Primary key. Represents a unique purchase journey."
+            tests:
+              - unique
+              - not_null
+      
+      - name: order_items
+        description: "Line-level details for each individual item inside an order."
+        columns:
+          - name: order_id
+            description: "Component of composite primary key. Foreign key to orders."
+            tests:
+              - not_null
+          - name: order_item_id
+            description: "Component of composite primary key. Sequential line number within the order."
+            tests:
+              - not_null
+
+      - name: order_payments
+        description: "Financial payment methods and installment ledger splits per order."
+        columns:
+          - name: order_id
+            description: "Component of composite primary key. Foreign key to orders."
+            tests:
+              - not_null
+          - name: payment_sequential
+            description: "Component of composite primary key. Sequential execution index for split payments."
+            tests:
+              - not_null
+
+      - name: order_reviews
+        description: "Customer satisfaction surveys and text review entries linked to transactions."
+        columns:
+          - name: review_id
+            description: "System generated review identifier. Note: Profiled as non-unique globally due to survey updates."
+            tests:
+              - not_null
+          - name: order_id
+            description: "Foreign key to orders."
+            tests:
+              - not_null
+
+      - name: products
+        description: "Product master catalog detailing attributes and physical specifications."
+        columns:
+          - name: product_id
+            description: "Primary key. Unique product item identifier."
+            tests:
+              - unique
+              - not_null
+
+      - name: sellers
+        description: "Commercial merchant master data."
+        columns:
+          - name: seller_id
+            description: "Primary key. Unique merchant identifier."
+            tests:
+              - unique
+              - not_null
+
+      - name: geolocation
+        description: "Spatial resolution reference map for Brazilian postal codes."
+        columns:
+          - name: geolocation_zip_code_prefix
+            description: "Non-unique business key. Spatial index used for geographic routing dimensions."
+            tests:
+              - not_null
+
+      - name: product_category_name_translation
+        description: "Mapping matrix translating Portuguese category slugs to English terminology."
+        columns:
+          - name: product_category_name
+            description: "Primary key. Portuguese nomenclature used as the join anchor."
+            tests:
+              - unique
+              - not_null
