@@ -95,7 +95,7 @@ sources:
         description: "Mapping matrix translating Portuguese category slugs to English terminology."
         columns:
           - name: product_category_name
-            description: "Primary key. Portuguese nomenclature used as the join anchor."
+            description: "Primary key. Portuguese categorization join mapping node."
             tests:
               - unique
               - not_null

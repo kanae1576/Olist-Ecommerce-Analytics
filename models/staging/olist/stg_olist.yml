@@ -1,0 +1,140 @@
+version: 2
+
+models:
+  - name: stg_olist__orders
+    description: "Cleaned core order transaction table capturing lifecycle states."
+    columns:
+      - name: order_id
+        description: "Primary key. Unique identifier for each order transaction."
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "Foreign key. Links to customers table."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__customers')
+                field: customer_id
+
+  - name: stg_olist__customers
+    description: "Cleaned customer directory with 5-digit ZIP codes restored via LPAD string formatting."
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "LENGTH(customer_zip_code_prefix) = 5"
+    columns:
+      - name: customer_id
+        description: "Primary key. Represents a unique purchase journey."
+        tests:
+          - unique
+          - not_null
+      - name: customer_zip_code_prefix
+        description: "Padded 5-digit postal code prefix."
+        tests:
+          - not_null
+
+  - name: stg_olist__order_items
+    description: "Cleaned line-level transaction splits containing pricing, freight, and item counts."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - order_id
+              - order_item_id
+    columns:
+      - name: order_id
+        description: "Component of composite primary key. Foreign key to orders."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__orders')
+                field: order_id
+      - name: order_item_id
+        description: "Component of composite primary key. Sequential line number within the order."
+        tests:
+          - not_null
+
+  - name: stg_olist__order_payments
+    description: "Cleaned payment logs with invalid 'not_defined' placeholder configurations expunged."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - order_id
+              - payment_sequential
+    columns:
+      - name: order_id
+        description: "Component of composite primary key. Foreign key to orders."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__orders')
+                field: order_id
+      - name: payment_sequential
+        description: "Component of composite primary key. Sequential execution index for split payments."
+        tests:
+          - not_null
+
+  - name: stg_olist__order_reviews
+    description: "Deduplicated review schema. Windowed function enforces a strict 1-to-1 max connection per transaction."
+    columns:
+      - name: review_id
+        description: "System generated review identifier. Profiled as non-unique globally due to survey updates."
+        tests:
+          - not_null
+      - name: order_id
+        description: "Foreign key to orders, eliminated multi-survey edits."
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__orders')
+                field: order_id
+
+  - name: stg_olist__products
+    description: "Cleaned product catalog specifications. External file permissions resolved to native storage."
+    columns:
+      - name: product_id
+        description: "Primary key. Unique product item identifier."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_olist__sellers
+    description: "Cleaned commercial merchant registry with padded 5-digit postal formatting applied."
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "LENGTH(seller_zip_code_prefix) = 5"
+    columns:
+      - name: seller_id
+        description: "Primary key. Unique merchant identifier."
+        tests:
+          - unique
+          - not_null
+      - name: seller_zip_code_prefix
+        description: "Spatial index used for geographic routing dimensions."
+        tests:
+          - not_null
+
+  - name: stg_olist__geolocation
+    description: "Geographic spatial reference data containing multi-point lat/long coordinates."
+    columns:
+      - name: geolocation_zip_code_prefix
+        description: "Non-unique business key. Spatial index used for geographic routing dimensions."
+        tests:
+          - not_null
+
+  - name: stg_olist__product_category_name_translation
+    description: "Language dictionary lookup translating Portuguese text to English strings."
+    columns:
+      - name: product_category_name
+        description: "Primary key. Portuguese categorization join mapping node."
+        tests:
+          - unique
+          - not_null
