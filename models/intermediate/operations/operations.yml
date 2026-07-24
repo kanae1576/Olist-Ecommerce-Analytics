@@ -1,0 +1,53 @@
+version: 2
+
+models:
+  - name: int_order_delivery_delays
+    description: >
+      Delivery performance model containing operational fulfilment metrics for
+      delivered orders only. Calculates seller handling time, delivery duration
+      and delivery delays to support logistics performance reporting.
+
+    columns:
+      - name: order_id
+        description: Primary key. Unique identifier for each delivered order.
+        tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: Foreign key linking the delivered order to the purchasing customer.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__customers')
+                field: customer_id
+
+      - name: order_status
+        description: Lifecycle status of the order. This model only contains delivered orders.
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - delivered
+
+      - name: order_purchase_at
+        description: Timestamp when the order was placed.
+
+      - name: shipped_at
+        description: Timestamp when the seller handed the order to the carrier.
+
+      - name: delivered_at
+        description: Timestamp when the customer received the order.
+
+      - name: estimated_delivery_at
+        description: Estimated delivery timestamp communicated to the customer.
+
+      - name: days_delayed
+        description: Number of days the delivery exceeded the estimated delivery date.
+
+      - name: delivery_days
+        description: Total number of days between purchase and delivery.
+
+      - name: seller_handling_days
+        description: Number of days between purchase and shipment by the seller.

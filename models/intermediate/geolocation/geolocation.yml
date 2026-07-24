@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: int_customer_zip_geolocation
+    description: >
+      Geographic lookup table providing a single representative location for
+      each ZIP code prefix by averaging latitude and longitude coordinates.
+      This model removes duplicate location records and serves as a reusable
+      geographic dimension for customer and seller analyses.
+
+    columns:
+      - name: zip_code_prefix
+        description: Primary key. Unique ZIP code prefix.
+        tests:
+          - unique
+          - not_null
+
+      - name: center_latitude
+        description: Average latitude representing the geographic centroid.
+
+      - name: center_longitude
+        description: Average longitude representing the geographic centroid.
+
+      - name: city_name
+        description: Representative city associated with the ZIP code prefix.
+
+      - name: state_code
+        description: Representative state associated with the ZIP code prefix.

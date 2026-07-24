@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: int_customer_purchase_info
+    description: >
+      Customer-level behavioural and lifetime value metrics aggregated at the
+      individual shopper level. This model consolidates purchase history across
+      multiple customer accounts belonging to the same customer_unique_id,
+      providing reusable metrics for customer segmentation, retention analysis
+      and downstream reporting.
+
+    columns:
+      - name: customer_unique_id
+        description: Primary key. Unique identifier representing an individual shopper.
+        tests:
+          - unique
+          - not_null
+
+      - name: total_purchase_count
+        description: Total number of completed purchases made by the customer.
+
+      - name: is_repeat_customer
+        description: Boolean flag indicating whether the customer has placed more than one order.
+
+      - name: first_purchase_at
+        description: Timestamp of the customer's first recorded purchase.
+
+      - name: last_purchase_at
+        description: Timestamp of the customer's most recent recorded purchase.
+
+      - name: customer_active_lifespan_days
+        description: Number of days between the customer's first and most recent purchase.
+
+      - name: lifetime_spend_amount
+        description: Total payment amount across all purchases.
+
+      - name: average_order_value
+        description: Average payment amount per order across the customer's purchase history.

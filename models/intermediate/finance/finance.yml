@@ -1,0 +1,57 @@
+version: 2
+
+models:
+  - name: int_order_financials
+    description: >
+      Order-level financial summary model combining line item, freight and
+      payment information into a single reusable fact table. Payment method
+      amounts are pivoted into separate columns to simplify downstream financial
+      reporting and analysis.
+
+    columns:
+      - name: order_id
+        description: Primary key. Unique identifier for each order.
+        tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: Foreign key linking the order to the purchasing customer.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__customers')
+                field: customer_id
+
+      - name: order_status
+        description: Current lifecycle status of the order.
+        tests:
+          - not_null
+
+      - name: total_item_price
+        description: Sum of all product prices within the order.
+
+      - name: total_freight_price
+        description: Sum of freight charges across all order items.
+
+      - name: total_payment_value
+        description: Total payment received for the order across all payment methods.
+
+      - name: total_items_count
+        description: Number of line items contained within the order.
+
+      - name: max_payment_installments
+        description: Maximum number of instalments used across payment records for the order.
+
+      - name: credit_card_amount
+        description: Portion of the order paid using credit card.
+
+      - name: debit_card_amount
+        description: Portion of the order paid using debit card.
+
+      - name: boleto_amount
+        description: Portion of the order paid using boleto.
+
+      - name: voucher_amount
+        description: Portion of the order paid using vouchers.
