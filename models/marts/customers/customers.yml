@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: mart_customers
+    description: "Customer dimension containing lifetime purchasing behaviour and business value segmentation. One row represents one unique customer."
+
+    columns:
+      - name: customer_unique_id
+        description: "Primary key. Unique customer identifier."
+        tests:
+          - unique
+          - not_null
+
+      - name: total_purchase_count
+        description: "Total number of completed purchases made by the customer."
+
+      - name: is_repeat_customer
+        description: "Indicates whether the customer has placed more than one order."
+
+      - name: first_purchase_at
+        description: "Timestamp of the customer's first purchase."
+
+      - name: last_purchase_at
+        description: "Timestamp of the customer's most recent purchase."
+
+      - name: lifetime_spend_amount
+        description: "Total payment amount across all completed purchases."
+
+      - name: average_order_value
+        description: "Average payment amount per completed purchase."
+
+      - name: customer_value_segment
+        description: "Business segmentation based on customer lifetime spend percentile."

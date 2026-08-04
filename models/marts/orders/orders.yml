@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: mart_orders
+    description: "Order fact table combining financial, delivery and customer geographic information. One row represents one order."
+
+    columns:
+      - name: order_id
+        description: "Primary key. Unique order identifier."
+        tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: "Foreign key referencing the customer."
+
+      - name: customer_unique_id
+        description: "Business customer identifier."
+
+      - name: order_purchase_at
+        description: "Timestamp when the order was placed."
+
+      - name: total_payment_value
+        description: "Total payment received for the order."
+
+      - name: total_item_price
+        description: "Total value of all items in the order."
+
+      - name: total_freight_price
+        description: "Total freight charged for the order."
+
+      - name: delivery_days
+        description: "Number of days between purchase and delivery."
+
+      - name: days_delayed
+        description: "Number of days delivered after the estimated delivery date."
+
+      - name: customer_state
+        description: "State associated with the customer's delivery address."

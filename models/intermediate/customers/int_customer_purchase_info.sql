@@ -1,10 +1,8 @@
 WITH customers AS (
     SELECT * FROM {{ ref('stg_olist__customers') }}
-),
-orders AS (
+), orders AS (
     SELECT * FROM {{ ref('stg_olist__orders') }}
-),
-order_financials AS (
+), order_financials AS (
     SELECT * FROM {{ ref('int_order_financials') }}
 ),
 
