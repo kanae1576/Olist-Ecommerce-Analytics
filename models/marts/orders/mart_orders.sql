@@ -48,7 +48,7 @@ SELECT
 
 FROM order_financials AS f
 
-LEFT JOIN order_delivery AS d
+INNER JOIN order_delivery AS d
     ON f.order_id = d.order_id
 
 LEFT JOIN customers AS c
